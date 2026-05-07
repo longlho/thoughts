@@ -24,3 +24,7 @@ The series covers:
 - tradeoffs between Bazel, Turborepo, and Nx
 
 Start with [the outline](frontend-bazel-monorepo-series/outline.md), then read the posts in numeric order.
+
+## Standalone Posts
+
+- [Next Server Actions Are Not An API Boundary](next-server-actions.md)
