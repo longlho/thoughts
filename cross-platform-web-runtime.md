@@ -13,17 +13,42 @@ The mistake is letting every feature handle those differences on its own.
 Most web apps end up with layers, even if nobody names them at first.
 
 ```mermaid
-flowchart TD
+flowchart TB
   app["Application"]
-  features["Product features"]
-  core["Core components\nDesign system, router, shared UI, domain helpers"]
-  runtime["Web platform runtime\nIO, storage, telemetry, analytics, localization, config, polyfills"]
-  native["Native capabilities\nBrowser APIs, webview APIs, desktop shell APIs"]
 
-  app --> features
-  features --> core
-  core --> runtime
-  runtime --> native
+  subgraph featureLayer["Product features"]
+    search["Feature A"]
+    settings["Feature B"]
+    checkout["Feature C"]
+  end
+
+  subgraph coreLayer["Core components"]
+    design["Design system"]
+    router["Router"]
+    sharedUi["Shared UI"]
+    domain["Domain helpers"]
+  end
+
+  subgraph runtimeLayer["Web platform runtime"]
+    io["IO"]
+    storage["Storage"]
+    telemetry["Telemetry"]
+    analytics["Analytics"]
+    l10n["Localization"]
+    config["Config"]
+    polyfills["Polyfills"]
+  end
+
+  subgraph nativeLayer["Native capabilities"]
+    browser["Browser APIs"]
+    webview["Webview APIs"]
+    desktop["Desktop shell APIs"]
+  end
+
+  app --> featureLayer
+  featureLayer --> coreLayer
+  coreLayer --> runtimeLayer
+  runtimeLayer --> nativeLayer
 ```
 
 The application owns product composition. Product features own user workflows. Core components own reusable product building blocks.
