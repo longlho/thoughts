@@ -10,15 +10,15 @@ pnpm build
 
 That is enough when there is one app, a few shared packages, and a small team. It stops being enough when the frontend becomes a graph: apps, SDK bundles, generated clients, translations, icons, tests, Storybook, browser extensions, edge workers, server bundles, static assets, and deployable images.
 
-At that point, the hard question is no longer:
+At that point, the question changes. It is no longer only:
 
 > How do we build the app?
 
-It becomes:
+It becomes something more annoying:
 
 > Which artifacts are affected by this change?
 
-**That is the problem Bazel is good at.**
+That is the point where Bazel starts to make sense.
 
 ```mermaid
 flowchart LR
@@ -47,7 +47,7 @@ A package script is easy to read:
 }
 ```
 
-But the script does not describe much. It does not precisely say which files are inputs, which packages are dependencies, which generated clients are required, which assets must be copied, or which downstream artifacts should be invalidated.
+The script is readable, but it hides almost everything the build actually cares about. It does not say which files are inputs, which packages are dependencies, which generated clients are required, which assets must be copied, or which downstream artifacts should be invalidated.
 
 Task runners can improve this a lot. Turborepo and Nx both add structure, caching, and affected workflows. For many repositories, that is the right level of abstraction.
 
@@ -64,13 +64,13 @@ Bazel becomes interesting when the frontend graph needs more than package-level 
 - deployment targets that consume built artifacts instead of rediscovering files from the working directory
 - selective side effects, such as uploading assets only when the artifact that feeds the upload changed
 
-Those are not just commands. **They are artifacts with dependencies.**
+Those are not just commands. They are files, manifests, packages, checks, and uploads with dependencies.
 
-That distinction changes the shape of the system. A translation catalog is not a script output that happens to land in a folder; it is an app-specific artifact derived from the dependency graph. A generated client is not just a prebuild step; it is a package with consumers. A CDN upload is not a shell command at the end of CI; it is a side effect attached to a verified bundle.
+Once you look at them that way, the system feels different. A translation catalog is not a random file that appears before build. It is an app-specific artifact derived from the dependency graph. A generated client is not just a prebuild step. It is a package with consumers. A CDN upload is not a shell command at the end of CI. It is a side effect attached to a verified bundle.
 
 ## Selective Builds Need Honest Boundaries
 
-Selective builds are only useful *if they are correct*.
+Selective builds are only useful if you can trust them.
 
 If a package can import undeclared dependencies, read undeclared files, or rely on global workspace state, the build graph becomes a guess. It may be fast, but it is not trustworthy.
 
@@ -84,7 +84,7 @@ Bazel pushes teams toward explicit boundaries:
 - tests have their own dependency surface
 - deployment artifacts consume known outputs
 
-That explicitness has a cost. BUILD files, macros, generators, and rules become real platform work. But the payoff is that a change to one package does not need to become a global frontend event.
+There is a cost. BUILD files, macros, generators, and rules become real work. But the payoff is simple: a change to one package does not have to become a global frontend event.
 
 ## Where The Pain Shows Up
 
@@ -101,13 +101,13 @@ Eventually, simple questions get expensive:
 - Which generated client version is being typechecked?
 - Why did CI fail when local development worked?
 
-Those questions are expensive because the graph exists, but it is implicit. Bazel's value is making that graph explicit enough for tools and humans to reason about.
+Those questions get expensive because the graph already exists, but it lives in scripts, conventions, and memory. Bazel's value is making enough of that graph explicit that tools and humans can reason about it.
 
 ## The Real Goal
 
-The goal is not to make every frontend engineer a Bazel expert.
+I do not think the goal is to make every frontend engineer a Bazel expert.
 
-The goal is to make the common path boring:
+The common path should be boring:
 
 - create a package
 - split a package
@@ -122,4 +122,4 @@ Good Bazel rules hide most of the machinery while preserving the graph. The rest
 
 Bazel is not the easiest frontend build tool to adopt. It asks the repository to be precise.
 
-In a large monorepo, **that precision is the feature**.
+In a large monorepo, that precision is the feature.

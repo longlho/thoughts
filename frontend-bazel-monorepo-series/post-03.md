@@ -6,9 +6,9 @@ Most TypeScript projects start with one command:
 tsc --noEmit
 ```
 
-Large frontend monorepos usually need **more than one TypeScript contract**. Runtime source, tests, config files, generated clients, browser code, server code, examples, and tools all have different assumptions.
+Large frontend monorepos usually need more than one TypeScript contract. Runtime source, tests, config files, generated clients, browser code, server code, examples, and tools all have different assumptions.
 
-One giant typecheck either becomes *too loose* or *too painful*.
+One giant typecheck usually becomes too loose, too slow, or both.
 
 ```mermaid
 flowchart TD
@@ -31,7 +31,7 @@ Bundling asks: what runtime artifact should be loaded?
 
 Those are different jobs. A shared library may emit declarations. A Vite app root may typecheck but not emit JavaScript because the bundler owns output. A config file may typecheck but never become runtime code.
 
-**Bazel lets those jobs be separate targets.**
+Bazel lets those jobs be separate targets.
 
 This matters for performance too. Typechecking can be significantly slower than transpilation because it needs semantic analysis across files and declarations. Modern tooling reflects that split: [`Oxc`](https://oxc.rs/) focuses on a high-performance JavaScript/TypeScript toolchain, including fast parsing and transformation, while TypeScript's native Go effort, exposed through the `tsgo` entry point in the TypeScript 7 beta, exists specifically because TypeScript performance is important enough to justify a native implementation path.
 
@@ -45,7 +45,7 @@ Tests need their own contract. They often import assertion libraries, DOM simula
 
 Config files are code too. `vite.config.ts`, `vitest.config.ts`, Storybook config, Tailwind config, and codegen config can all import packages and change output artifacts. A bundler plugin belongs to the config target, not every runtime package the app imports.
 
-Generated clients should be first-class typecheck inputs, not ambient files that happen to exist locally. Browser code should typecheck against browser APIs. Server code should typecheck against server APIs. Worker code may need a third contract.
+Generated clients should be declared typecheck inputs, not ambient files that happen to exist locally. Browser code should typecheck against browser APIs. Server code should typecheck against server APIs. Worker code may need a third contract.
 
 ## The Dependency Side
 
@@ -55,9 +55,9 @@ Those are different. A workspace may install hundreds of packages. A component s
 
 Runtime deps belong to runtime source. Test deps belong to tests. Config deps belong to config targets. Generated deps belong to packages that import generated artifacts.
 
-**Dependency placement is architecture.**
+Dependency placement is architecture.
 
-Ambient deps should be rare and reviewed. Visibility rules should prevent accidental architecture. Shared packages should not import app packages. Browser-only packages should not import server-only modules. Generated packages should not depend on handwritten app code.
+Ambient deps should be rare and reviewed. Visibility rules should catch accidental architecture. Shared packages should not import app packages. Browser-only packages should not import server-only modules. Generated packages should not depend on handwritten app code.
 
 Circular dependencies should be treated as build graph bugs, not harmless TypeScript trivia. They make initialization order fragile, make tests harder to isolate, and make package splitting much harder. Bazel's explicit dependency graph gives teams a natural place to detect and reject cycles between packages.
 
@@ -69,7 +69,7 @@ Imagine one global typecheck that includes runtime source, tests, config files, 
 
 To make that pass, the tsconfig often grows broad: DOM types, Node types, test globals, bundler globals, generated paths, and tool-specific settings all live together. That can hide real bugs. Browser code may accidentally use a Node API. Server code may accidentally assume the DOM. Runtime source may import a test helper. Config-only dependencies may appear available everywhere.
 
-Separate typecheck targets and dependency surfaces make those mistakes visible. **The stricter model is often less painful because failures are more specific.**
+Separate typecheck targets and dependency surfaces make those mistakes visible. The stricter model is often less painful because failures are more specific.
 
 ## Make Failures Fixable
 
@@ -77,7 +77,7 @@ Dependency checks should not feel like riddles.
 
 A good failure says which import caused the problem, which target owns the importing file, and whether the missing dependency belongs to runtime, test, config, or generated deps. A visibility failure should explain which boundary was crossed.
 
-Strictness works when the correct fix is obvious. If engineers have to guess, they will add broad dependencies or look for workarounds.
+Strictness works when the correct fix is obvious. If people have to guess, they will add broad dependencies or look for workarounds.
 
 ## Lint Rules Need Typecheck Too
 

@@ -4,9 +4,9 @@ Bazel should not replace Vite.
 
 Vite is good at bundling frontend code. Bazel is good at modeling repository-scale inputs and outputs. Large frontend monorepos need both.
 
-The useful split is:
+The split I like is:
 
-> **Bazel decides what the app needs. Vite turns it into a bundle.**
+> Bazel decides what the app needs. Vite turns it into a bundle.
 
 ```mermaid
 flowchart LR
@@ -33,7 +33,7 @@ Runtime source depends on React, shared packages, state libraries, generated cli
 
 Those dependency sets should not be mixed.
 
-**A Vite plugin is not a runtime dependency just because it builds runtime code.**
+A Vite plugin is not a runtime dependency just because it builds runtime code.
 
 ## App Roots May Typecheck Without Emitting
 
@@ -49,7 +49,7 @@ Tests are not runtime source. They are consumers of runtime source.
 
 A test target should depend on the package under test, plus test files and test-only dependencies. That gives a clean split: runtime typecheck can pass or fail independently, test typecheck can include test-only libraries, and production bundles do not inherit test dependencies.
 
-Storybook and visual tests are also consumers. They may need browsers, fonts, screenshots, fixtures, themes, and Storybook packages. Those dependencies are heavy. They should be explicit, and they should not pollute runtime package deps.
+Storybook and visual tests are also consumers. They may need browsers, fonts, screenshots, fixtures, themes, and Storybook packages. Those dependencies are heavy. They should be explicit, and they should not leak into runtime package deps.
 
 ## Assets, Fixtures, And Environment Inputs
 
@@ -57,7 +57,7 @@ Vite actions and test actions need more than `.ts` files: CSS, JSON, SVG, static
 
 If an action reads a file, that file should be in the graph. If a client bundle needs a public environment value, that value should be modeled as a build input. If a server runtime needs an env file, that should be separate from client-side replacement.
 
-**A reliable app or test is not just code. It is code plus declared data.**
+A reliable app or test is not just code. It is code plus declared data.
 
 ## Output Shape Is Part Of The API
 
@@ -67,4 +67,4 @@ An app may emit an entire `dist` directory. A browser-extension background scrip
 
 Those output shapes are not incidental. Downstream verification, uploads, images, workers, and tests depend on them.
 
-This is how "run Vite" becomes a reliable artifact-producing target.
+That is how "run Vite" becomes a reliable artifact-producing target instead of a script that happens to work on one machine.

@@ -6,7 +6,7 @@ The bundler answered one question:
 
 > Can these inputs become output files?
 
-Large frontend systems need another question:
+The build still needs another question:
 
 > Are those output files acceptable?
 
@@ -32,7 +32,7 @@ These checks should consume the built artifact, not the source tree.
 
 ## Concrete Built Asset Checks
 
-A large SPA can turn runtime assumptions into small tests against the emitted `dist` directory.
+A large SPA usually has a bunch of assumptions that nobody wants to check by hand. Put the cheap ones against the emitted `dist` directory.
 
 Useful checks include:
 
@@ -70,7 +70,7 @@ file_size_test(
 )
 ```
 
-The exact rule names do not matter. The important design choice is that the checks read the built files. They catch the things source analysis cannot: a placeholder that survived replacement, a server-only string that became reachable, a chunk that moved into the wrong public bucket, or a CSS policy that disappeared during extraction.
+The exact rule names do not matter. The important choice is that the checks read the built files. They catch the things source analysis cannot: a placeholder that survived replacement, a server-only string that became reachable, a chunk that moved into the wrong public bucket, or a CSS policy that disappeared during extraction.
 
 ## Source Checks Are Not Enough
 
@@ -78,7 +78,7 @@ Many output bugs do not exist in source form.
 
 The source may contain `import.meta.env.PUBLIC_URL`, but the emitted bundle contains the actual string. The source may import a dynamic chunk, but the emitted manifest decides the filename. The source may configure sourcemaps, but the emitted comment determines what production debuggers see.
 
-That is why output checks should inspect output. They validate the artifact the user, CDN, server, or monitoring system will actually consume.
+That is why output checks should inspect output. They validate the artifact the user, CDN, server, or monitoring system will actually see.
 
 ## Generated Assets Need Checks Too
 
@@ -86,13 +86,13 @@ Generated runtime assets deserve the same treatment as bundles.
 
 Translation catalogs can be structurally invalid. Locale files can miss keys. Icon sprites can reference symbols that do not exist in the master sprite. Route manifests can point to stale outputs. GraphQL persisted-query manifests can miss operations.
 
-These checks are usually cheap compared with the cost of discovering the problem after deployment. If a generated asset affects runtime behavior, it should have a verification target.
+These checks are usually cheap compared with finding the problem after deployment. If a generated asset affects runtime behavior, it should have a verification target.
 
 ## Deployment Is A Consumer
 
 Deployment should not rediscover files from the working directory.
 
-The better path is:
+The cleaner path is:
 
 1. Build targets produce artifacts.
 2. Verification targets validate artifacts.
@@ -137,17 +137,17 @@ output_scan_test(
 )
 ```
 
-This is a subtle but valuable shift. The deployment script is no longer a pile of shell globbing. It is another consumer of the same verified artifact that tests and images consume.
+This is the useful shift: the deployment script is no longer a pile of shell globbing. It is another consumer of the same verified artifact that tests and images consume.
 
 ## Selective Side Effects
 
-Build systems usually focus on selective computation: only rebuild what changed. Large frontend systems also need **selective side effects**.
+Build systems usually focus on selective computation: only rebuild what changed. Frontend deploys also need selective side effects.
 
 Uploading assets, publishing sourcemaps, deploying preview workers, registering GraphQL persisted queries, or syncing extension bundles should not happen just because a broad CI script ran. They should happen because the artifact they consume actually changed.
 
 That is the same idea behind changed-target CI pipelines: compute the affected build graph first, then run the expensive or external side effects only for the affected artifacts.
 
-The practical benefits are large:
+The practical benefits are not glamorous, but they matter:
 
 - fewer unnecessary uploads
 - fewer flaky network operations
@@ -163,8 +163,8 @@ Deployment artifacts often need release metadata: commit SHA, version, environme
 
 A practical split is: build cacheable artifacts first, verify them, then stamp or label only the targets that publish or package them.
 
-Preview environments should be first-class too. They often use the same verified bundle as production with different hostnames, asset prefixes, routes, worker names, credentials, and cleanup policies.
+Preview environments deserve the same treatment. They often use the same verified bundle as production with different hostnames, asset prefixes, routes, worker names, credentials, and cleanup policies.
 
-Those differences should be modeled, not hidden. The best preview systems are boring because they are just another consumer of the artifact graph.
+Those differences should be modeled, not hidden in a script branch. The best preview systems are boring because they are just another consumer of the artifact graph.
 
 The frontend graph is not done at `dist`. It is done when the verified artifact is ready to run.

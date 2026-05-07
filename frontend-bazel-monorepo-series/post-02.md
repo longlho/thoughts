@@ -1,10 +1,10 @@
 # Part 2: The Anatomy Of A Frontend Package
 
-A frontend package is not just a folder with TypeScript files.
+A frontend package is rarely just a folder of TypeScript files.
 
 In a large monorepo, the same directory may contain runtime source, tests, stories, config files, fixtures, JSON, CSS, generated files, and static assets. Treating all of that as one project makes dependency boundaries fuzzy.
 
-Bazel works better when a package is modeled as **a small set of artifacts**.
+Bazel works better when a package is modeled as a small set of artifacts.
 
 ```mermaid
 flowchart TD
@@ -21,9 +21,9 @@ flowchart TD
 
 ## Internal Packages Vs Leaf Packages
 
-Internal packages are composable. They expose components, hooks, clients, utilities, styles, or framework helpers. Their job is to be depended on.
+Internal packages are the pieces other code builds on. They expose components, hooks, clients, utilities, styles, or framework helpers.
 
-Leaf packages produce something runnable or deployable: an app, SDK bundle, browser extension entry, worker script, example, or server artifact. Their job is to gather inputs and emit an output.
+Leaf packages produce something runnable or deployable: an app, SDK bundle, browser extension entry, worker script, example, or server artifact.
 
 Those two shapes should not be modeled the same way. A shared library should not carry app deployment concerns. An app bundle should not pretend it is just another library.
 
@@ -31,15 +31,15 @@ Those two shapes should not be modeled the same way. A shared library should not
 
 In JavaScript workspaces, the natural instinct is to make every boundary a new package with its own `package.json`.
 
-That can work, but it is not always ergonomic at monorepo scale. Package names are global within the workspace, so every small boundary needs a unique, stable, bikeshed-prone name. Renaming a package becomes more expensive than moving a directory. Publishing-oriented metadata starts leaking into internal architecture. A tiny refactor can turn into package naming, exports, dependency metadata, and toolchain ceremony.
+That can work, but it gets clunky at monorepo scale. Package names are global within the workspace, so every small boundary needs a unique, stable, bikeshed-prone name. Renaming a package becomes more expensive than moving a directory. Publishing-oriented metadata starts leaking into internal architecture. A tiny refactor can turn into package naming, exports, dependency metadata, and toolchain ceremony.
 
-Bazel gives another option: **a package boundary can be a BUILD package, not necessarily an npm package**. The directory and target label can carry the internal boundary while the root package manager still owns installed third-party versions.
+Bazel gives another option: a package boundary can be a BUILD package, not necessarily an npm package. The directory and target label can carry the internal boundary while the root package manager still owns installed third-party versions.
 
 This is especially useful for package splitting. Moving code from `features/search/results` to `features/search/result-card` should not require inventing a public package name if the boundary is only internal to the repository.
 
 ## Split The Surfaces
 
-A healthy frontend package usually has several surfaces:
+A frontend package usually has several surfaces:
 
 - **runtime source**: code that ships or is imported by other packages
 - **tests**: test files, fixtures, test-only libraries
@@ -48,11 +48,11 @@ A healthy frontend package usually has several surfaces:
 - **assets**: JSON, CSS, SVG, images, translations, static files
 - **generated outputs**: clients, manifests, locale metadata, sprites
 
-The important rule: **dependencies should attach to the surface that uses them**.
+The important rule: dependencies should attach to the surface that uses them.
 
 A test runner belongs to the test target. A Vite plugin belongs to the config target. A browser-only library belongs to browser runtime source. A generated client belongs to the package that imports it.
 
-This keeps production dependencies clean and makes selective builds meaningful.
+This keeps production dependencies cleaner and makes selective builds less hand-wavy.
 
 ## Companion Targets
 
@@ -68,15 +68,15 @@ One package may expand into several predictable targets:
 - extracted icon usage
 - internal dependency metadata
 
-Developers should not handwrite all of this every time. A macro or generator can create the standard targets from conventions. The value is predictable shape: downstream rules can rely on stable names and known behavior.
+Developers should not handwrite all of this every time. A macro or generator can create the standard targets from conventions. The useful part is the predictable shape: downstream rules can rely on stable names and known behavior.
 
 ## Why This Shape Helps
 
-This structure pays off when packages change.
+This structure pays off when code moves, which is the part people tend to underestimate.
 
 If a test file changes, the test target should be invalidated. The production bundle usually should not be. If a Storybook story changes, the Storybook target should rebuild. Runtime consumers should not inherit Storybook dependencies. If a generated locale file changes, app bundles that consume it should rebuild, but unrelated packages should stay out of the blast radius.
 
-That is the practical reason to split package surfaces. It is not just cleaner modeling. It gives the build system enough information to avoid work safely.
+That is the practical reason to split package surfaces. It is not just tidier modeling. It gives the build system enough information to skip work without guessing.
 
 It also gives better errors. "The config target is missing a dependency" is much more useful than "the package failed." "This test imports an undeclared fixture" is better than a mysterious CI-only file-not-found error.
 
@@ -86,11 +86,11 @@ Frontend packages are rarely pure TypeScript.
 
 If source imports JSON, the JSON is an input. If a component imports CSS, the CSS is an input. If tests need fixtures, fixtures are inputs. If an app embeds translations or sprites, those generated files are inputs.
 
-Sandboxed builds are unforgiving here, in a good way. If an action reads a file that was not declared, the build should fail. That failure means the graph is missing an edge.
+Sandboxed builds are blunt here, in a useful way. If an action reads a file that was not declared, the build should fail. That failure means the graph is missing an edge.
 
 ## Visibility Is Architecture
 
-Package visibility is not bureaucracy. It is architecture encoded in the build graph.
+Package visibility can feel bureaucratic until it catches the first bad dependency. Then it starts to look like architecture encoded in the build graph.
 
 A design-system package may expose supported components and hide internals. An app feature may be visible only within that app. A generated client may be broadly visible. A test helper may be visible only to tests.
 
@@ -116,11 +116,11 @@ Bazel does not answer those questions automatically. The build rules have to enc
 
 ## Where Codegen Fits
 
-The easiest BUILD file is the one most engineers do not have to edit.
+The best BUILD file is often the one most engineers do not have to edit.
 
 Large frontend repositories change constantly: files move, packages split, tests appear, generated clients change, and imports drift. If every one of those changes requires careful BUILD-file surgery, the build system becomes a tax on refactoring.
 
-**Generation is how you keep Bazel precise without making it tedious.**
+Generation is how you keep Bazel precise without making it tedious.
 
 ```mermaid
 flowchart LR
@@ -137,7 +137,7 @@ Codegen is good at mechanical facts: source files, test files, story files, conf
 
 Humans should still own architectural choices: visibility, package boundaries, deployability, unusual runtime assets, intentional ambient deps, and special bundling behavior.
 
-The generator emits the common shape. **The rules own the behavior.**
+The generator emits the common shape. The rules own the behavior.
 
 One promising tool in this space is [`hermeticbuild/gazelle_ts`](https://github.com/hermeticbuild/gazelle_ts), a Gazelle TypeScript language extension that generates abstract TypeScript rule kinds and lets consumers map those kinds to project-specific macros. The important idea is the abstraction boundary: the generator can own source/test/config/import discovery while the repository still owns the concrete rule behavior.
 
@@ -147,7 +147,7 @@ Generated targets should be predictable. For a package named `ui`, a repository 
 
 The names are less important than the stability. Other rules can compose those targets without knowing the package internals.
 
-Stable target names are build-system APIs. *Treat them that way.*
+Stable target names are build-system APIs. Treat them that way.
 
 ## Package Splitting Should Be Boring
 
@@ -155,9 +155,9 @@ Package splitting is a great test of build ergonomics.
 
 The desired workflow is: move files, update imports, run the generator, and run affected tests.
 
-If splitting requires hand-editing several build targets, copy-pasting config, and guessing dependency lists, engineers will avoid it. The repository will accumulate oversized packages because the healthy architecture is too expensive.
+If splitting requires hand-editing several build targets, copy-pasting config, and guessing dependency lists, engineers will avoid it. The repository will accumulate oversized packages because the better shape is too expensive.
 
-Bazel provides the precise graph. **Codegen makes that graph affordable to maintain.**
+Bazel provides the precise graph. Codegen makes that graph affordable to maintain.
 
 ## Absolute Imports Help Refactors
 

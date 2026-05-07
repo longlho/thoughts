@@ -109,7 +109,7 @@ Move beyond `dist`. This post treats built frontend artifacts as APIs that need 
 
 ### Abstract
 
-Go deep on Bazel, Turborepo, and Nx through the lens of large frontend monorepos. The goal is not to rank them universally, but to explain the different models: package task orchestration, project graph tooling, and explicit artifact/action graphs.
+Go deep on Bazel, Turborepo, and Nx through the lens of large frontend monorepos. This is not a universal ranking; it is a comparison of models: package task orchestration, project graph tooling, and explicit artifact/action graphs.
 
 ### Covers
 
@@ -126,7 +126,7 @@ Go deep on Bazel, Turborepo, and Nx through the lens of large frontend monorepos
 
 ### Abstract
 
-Close by discussing what it takes to operate a Bazel-based frontend build system as long-lived product infrastructure.
+Close by discussing what it takes to keep a Bazel-based frontend build system useful after the migration is over.
 
 ### Covers
 
