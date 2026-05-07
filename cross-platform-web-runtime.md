@@ -30,6 +30,7 @@ flowchart TB
   end
 
   subgraph runtimeLayer["Web platform runtime"]
+    direction LR
     io["IO"]
     storage["Storage"]
     telemetry["Telemetry"]
