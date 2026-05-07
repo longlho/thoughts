@@ -86,6 +86,100 @@ At build time, the framework needs to decide which server function an ID points 
 
 That means a small code or framework change can produce a different ID for the same conceptual mutation.
 
+Here is the important part.
+
+In one version of the scheme, the action ID was effectively tied to a small set of build-time facts:
+
+```mermaid
+flowchart LR
+  salt["Build salt"] --> hash["SHA-1"]
+  file["File path"] --> hash
+  export["Export name"] --> hash
+  hash --> id["Action ID"]
+```
+
+In that world, this kind of refactor could keep the same action ID:
+
+```ts
+'use server'
+
+export async function updateItem(id: string, value: string) {
+  // ...
+}
+```
+
+```ts
+'use server'
+
+export async function updateItem(
+  id: string,
+  value: string,
+  options?: { optimistic?: boolean },
+) {
+  // ...
+}
+```
+
+The file stayed the same. The export stayed the same. If the build salt stayed the same, the action ID stayed the same.
+
+Newer implementations include more function-shape information. In the current Next source, the generated server reference ID still starts from a SHA-1 over the hash salt, file name, and export name, but it also appends a byte that encodes whether the reference is a cache reference plus an argument mask and rest-argument bit.
+
+```mermaid
+flowchart LR
+  salt["Build salt"] --> hash["SHA-1 base"]
+  file["File path"] --> hash
+  export["Export name"] --> hash
+  hash --> byte["Append metadata byte"]
+  isCache["Server action vs cache reference"] --> byte
+  args["Argument mask"] --> byte
+  rest["Rest argument bit"] --> byte
+  byte --> rotate["Rotate bytes"]
+  rotate --> id["Action ID"]
+```
+
+That is a reasonable implementation change. The framework is trying to encode more about the server reference into the ID. But operationally, it changes the compatibility story. A parameter-shape change can now mean "new generated API endpoint," even if the source file and export name did not move.
+
+The rough comparison looks like this:
+
+```mermaid
+flowchart TD
+  subgraph v14["Older action ID shape"]
+    v14a["hash salt"] --> v14hash["hash"]
+    v14b["file path"] --> v14hash
+    v14c["export name"] --> v14hash
+    v14hash --> v14id["same ID if those stay stable"]
+  end
+
+  subgraph v15["Newer action ID shape"]
+    v15a["hash salt"] --> v15hash["hash + metadata"]
+    v15b["file path"] --> v15hash
+    v15c["export name"] --> v15hash
+    v15d["cache/action bit"] --> v15hash
+    v15e["argument mask"] --> v15hash
+    v15f["rest-argument bit"] --> v15hash
+    v15hash --> v15id["new ID when shape changes"]
+  end
+```
+
+This is exactly the kind of detail that is easy to miss in an upgrade. The source diff looks like a compiler implementation detail. In production, it can change the public token old clients use to call the server.
+
+Another way to think about it: the public "API name" is synthesized from code shape.
+
+```mermaid
+flowchart LR
+  salt["Build hash salt"] --> makeId["Generate server reference ID"]
+  file["File name\napp/actions.ts"] --> makeId
+  fn["Export / function name\nupdateItem"] --> makeId
+  params["Parameter shape\nid, value, options?"] --> makeId
+  makeId --> actionId["Action ID\naction_def456"]
+  actionId --> client["Client bundle\ncreateServerReference(action_def456)"]
+  actionId --> server["Server manifest\naction_def456 -> updateItem"]
+  client --> post["POST /\nnext-action: action_def456"]
+  post --> server
+```
+
+That is the surprising part. The thing behaving like an API route is not named by a URL you wrote. It is named by a compiler-generated ID derived from implementation details.
+
 ```mermaid
 flowchart LR
   subgraph old["Build A"]
@@ -128,6 +222,18 @@ From the user's point of view, nothing unusual happened. They opened a page and 
 From the server's point of view, a client called an action ID that no longer exists.
 
 That kind of failure is easy to miss in local development because local development usually has one browser, one server, one version, and no real deploy overlap. Production has cached assets, long-lived tabs, rolling deploys, multiple instances, retries, and users who click buttons at inconvenient times.
+
+When this fails during a deploy, the graph does not look like a slow burn. It looks like a cliff:
+
+```mermaid
+xychart-beta
+  title "Server Action failures during a version-skew deploy"
+  x-axis ["18:00", "18:10", "18:20", "18:30", "18:40", "18:50", "19:00", "19:10"]
+  y-axis "failed action calls" 0 --> 120
+  bar [5, 4, 6, 5, 7, 18, 105, 64]
+```
+
+The shape is the clue. A normal application bug usually follows traffic. Action ID skew shows up when the deploy crosses the old-client/new-server boundary.
 
 ## Why This Is Different From A Route Handler
 
