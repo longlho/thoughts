@@ -28,3 +28,4 @@ Start with [the outline](frontend-bazel-monorepo-series/outline.md), then read t
 ## Standalone Posts
 
 - [Next Server Actions Are Not An API Boundary](next-server-actions.md)
+- [A Cross-Platform Web Runtime Is A Product Boundary](cross-platform-web-runtime.md)
